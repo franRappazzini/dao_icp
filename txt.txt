@@ -7,3 +7,26 @@ dfx deploy dao --argument "(record {
      proposal_submission_deposit = record { amount_e8s = 10_000 };
  };
 })"
+
+submit_proposal
+
+dfx canister call dao submit_proposal '(record {method = "idk"; canister_id = principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"; message = vec {0};})'
+
+
+-----------------------------------------------
+
+
+test-token
+
+dfx deploy token --argument '(record { initial_mints = vec {record { account = record { owner = principal "ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe";}; amount = 85000000000000 };}; minting_account = record { owner = principal "ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe";}; token_name = "BOX"; token_symbol = "BOX"; decimals = 6; transfer_fee = 100 })'
+
+stoic:
+png6r-serfz-53n44-ve7je-p3j4l-7gbo7-6tnli-wqefg-oj6lr-3md5t-iqe
+plug:
+7p4f2-mwdsf-i4lyo-i7fkd-grfb2-nosfi-nh4gn-fuwkb-a5gdh-jh5y7-hqe
+yo:
+ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe
+
+dfx canister call token icrc1_transfer '(record {to= record {owner= principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"}; amount = 11_000_000_000_000})'
+
+dfx canister call token icrc2_approve '(record { spender = record {owner = principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"; subaccount = null;}; amount = 73999999999900})'

@@ -12,6 +12,8 @@ import Buffer "mo:base/Buffer";
 import TrieMap "mo:base/TrieMap";
 import Int "mo:base/Int";
 import Float "mo:base/Float";
+import Debug "mo:base/Debug";
+import Nat8 "mo:base/Nat8";
 import Types "./Types";
 import ICRC "./ICRC";
 import Sonic "./Sonic";
@@ -24,9 +26,9 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
     stable var lastProposalsStable : [(Principal, Int)] = [];
 
     // set boxy token
-    let box : ICRC.Actor = actor ("2vgyc-jqaaa-aaaao-a2gdq-cai"); // mainnet
-    // let box : ICRC.Actor = actor ("2vgyc-jqaaa-aaaao-a2gdq-cai"); // local
-    let sonic : Sonic.Self = actor ("3xwpq-ziaaa-aaaah-qcn4a-cai"); //mainnet
+    // let box : ICRC.Actor = actor ("2vgyc-jqaaa-aaaao-a2gdq-cai"); // mainnet
+    let box : ICRC.Actor = actor ("be2us-64aaa-aaaaa-qaabq-cai"); // local
+    // let sonic : Sonic.Self = actor ("3xwpq-ziaaa-aaaah-qcn4a-cai"); //mainnet
 
     // on going tx
     let onGoingTx = TrieMap.TrieMap<Principal, Bool>(Principal.equal, Principal.hash);
@@ -98,64 +100,141 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
         // [x] During the first vote, we need to ensure that no one else can create a new proposal
         switch (proposal_get(0)) {
             case (null) {};
-            case (?res) if (res.state == #open) return #err("The first proposal is open.");
-        };
-
-        // [x] 2. verify last caller proposal
-        switch (lastProposals.get(caller)) {
-            case (null) lastProposals.put(caller, Time.now());
-            case (?res) {
-                let nanosecPerDay = 86_400_000_000_000;
-                let time = Time.now();
-                let timeParsed = time / nanosecPerDay;
-                let lastProposal = res / nanosecPerDay;
-
-                if (timeParsed == lastProposal) return #err("You only can create 1 proposal per day.") else lastProposals.put(caller, time);
+            case (?res) if (res.state == #open) {
+                // remove caller from on going txs
+                onGoingTx.delete(caller);
+                return #err("The first proposal is open.");
             };
         };
 
         try {
-
             // calculate how many BOX are 1 ICP from Sonic Pool
-            let pairInfo = await sonic.getPair(Principal.fromText("2vgyc-jqaaa-aaaao-a2gdq-cai"), Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai"));
-            switch (pairInfo) {
-                case (null) return #err("Sorry, we can't calculate the $BOX amount. Please, contact with the team.");
+            // let pairInfo = await sonic.getPair(Principal.fromText("2vgyc-jqaaa-aaaao-a2gdq-cai"), Principal.fromText("ryjl3-tyaaa-aaaaa-aaaba-cai"));
+            // switch (pairInfo) {
+            //     case (null) return #err("Sorry, we can't calculate the $BOX amount. Please, contact with the team.");
+            //     case (?res) {
+            // let price : Float = (Float.fromInt(res.reserve0) / Float.fromInt(res.reserve1)) * 100;
+            // let parsedPrice : Nat = Int.abs(Float.toInt(price));
+            let parsedPrice = 1825;
+
+            // let tx = await makeTx(caller, parsedPrice /* system_params.proposal_submission_deposit.amount_e8s */);
+            // verify if the user balance is enough
+            let balance = await box.icrc1_balance_of({
+                owner = caller;
+                subaccount = null;
+            });
+            Debug.print(debug_show caller);
+
+            let fee = await box.icrc1_fee();
+            let decimals = Nat8.toNat(await box.icrc1_decimals());
+
+            let amount = parsedPrice * (10 ** decimals);
+            Debug.print(debug_show (amount, fee, balance));
+
+            if ((amount + fee) > balance) {
+                // remove caller from on going txs
+                onGoingTx.delete(caller);
+                return #err("You don't have enough balance.");
+            };
+
+            // let approve = await box.icrc2_approve({
+            //     from_subaccount = null;
+            //     spender = {
+            //         owner = Principal.fromActor(Self);
+            //         subaccount = null;
+            //     };
+            //     amount = 1825 * 10 ** 6; // FIXME only necesary tokens
+            //     expected_allowance = null;
+            //     expires_at = null;
+            //     fee = null;
+            //     memo = null;
+            //     created_at_time = null;
+            // });
+
+            // Debug.print(debug_show ("aprover errror:", approve));
+            // switch (approve) {
+            //     case (#Ok(_)) {};
+            //     case (#Err(_)) {
+            //         // remove caller from on going txs
+            //         onGoingTx.delete(caller);
+            //         return #err("Approve error.");
+            //     };
+            // };
+
+            // [x] 2. verify last caller proposal
+            switch (lastProposals.get(caller)) {
+                case (null) lastProposals.put(caller, Time.now());
                 case (?res) {
-                    let price : Float = (Float.fromInt(res.reserve0) / Float.fromInt(res.reserve1)) * 100;
-                    let parsedPrice : Nat = Int.abs(Float.toInt(price));
+                    let nanosecPerDay = 86_400_000_000_000;
+                    let time = Time.now();
+                    let timeParsed = time / nanosecPerDay;
+                    let lastProposal = res / nanosecPerDay;
 
-                    let tx = await makeTx(caller, parsedPrice /* system_params.proposal_submission_deposit.amount_e8s */);
-                    switch (tx) {
-                        case (#ok) {};
-                        case (#err(msg)) return #err(msg);
-                    };
-
-                    Result.chain(
-                        // anyone can create a proposal
-                        // deduct_proposal_submission_deposit(caller),
-                        #ok,
-                        func(()) : Types.Result<Nat, Text> {
-                            let proposal_id = next_proposal_id;
-                            next_proposal_id += 1;
-
-                            let proposal : Types.Proposal = {
-                                id = proposal_id;
-                                timestamp = Time.now();
-                                proposer = caller;
-                                payload;
-                                state = #open;
-                                votes_yes = Types.zeroToken;
-                                votes_no = Types.zeroToken;
-                                voters = List.nil();
-                            };
-                            proposal_put(proposal_id, proposal);
-                            // remove caller from on going txs
-                            onGoingTx.delete(caller);
-                            #ok(proposal_id);
-                        },
-                    );
+                    if (timeParsed == lastProposal) {
+                        // remove caller from on going txs
+                        onGoingTx.delete(caller);
+                        return #err("You only can create 1 proposal per day.");
+                    } else lastProposals.put(caller, time);
                 };
             };
+
+            // deposit to create the proposal
+            let tx = await box.icrc2_transfer_from({
+                spender_subaccount = null;
+                from = { owner = caller; subaccount = null };
+                to = { owner = Principal.fromActor(Self); subaccount = null };
+                amount /*=  system_params.proposal_submission_deposit.amount_e8s */;
+                fee = ?fee;
+                memo = null;
+                created_at_time = null;
+            });
+
+            Debug.print(debug_show tx);
+
+            switch (tx) {
+                case (#Ok(nat)) { /* return #ok(nat) */ };
+                case (#Err(_)) {
+                    // remove caller from on going txs
+                    onGoingTx.delete(caller);
+                    return #err("Tx error.");
+                };
+            };
+
+            // switch (tx) {
+            //     case (#ok) {};
+            //     case (#err(msg)) {
+            //         // remove caller from on going txs
+            //         onGoingTx.delete(caller);
+            //         return #err(msg);
+            //     };
+            // };
+
+            Result.chain(
+                // anyone can create a proposal
+                // deduct_proposal_submission_deposit(caller),
+                #ok,
+                func(()) : Types.Result<Nat, Text> {
+                    let proposal_id = next_proposal_id;
+                    next_proposal_id += 1;
+
+                    let proposal : Types.Proposal = {
+                        id = proposal_id;
+                        timestamp = Time.now();
+                        proposer = caller;
+                        payload;
+                        state = #open;
+                        votes_yes = Types.zeroToken;
+                        votes_no = Types.zeroToken;
+                        voters = List.nil();
+                    };
+                    proposal_put(proposal_id, proposal);
+                    // remove caller from on going txs
+                    onGoingTx.delete(caller);
+                    #ok(proposal_id);
+                },
+            );
+            // };
+            // };
 
         } catch (e) {
             #err("Unexpected error." # Error.message(e));
@@ -188,11 +267,11 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
                 if (List.some(proposal.voters, func(e : Principal) : Bool = e == caller)) return #err("Already voted");
 
                 try {
-                    let tx = await makeTx(caller, system_params.proposal_vote_threshold.amount_e8s);
-                    switch (tx) {
-                        case (#ok) {};
-                        case (#err(msg)) return #err(msg);
-                    };
+                    // let tx = await makeTx(caller, system_params.proposal_vote_threshold.amount_e8s);
+                    // switch (tx) {
+                    //     case (#ok) {};
+                    //     case (#err(msg)) return #err(msg);
+                    // };
 
                     var votes_yes = proposal.votes_yes.amount_e8s;
                     var votes_no = proposal.votes_no.amount_e8s;
@@ -360,11 +439,60 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
                 owner = caller;
                 subaccount = null;
             });
+            Debug.print(debug_show caller);
 
             let fee = await box.icrc1_fee();
+            let decimals = Nat8.toNat(await box.icrc1_decimals());
 
-            let amount = price * (10 ** fee);
-            if ((amount + fee) > balance) return #err("You don't have enough balance.");
+            let amount = price * (10 ** decimals);
+            Debug.print(debug_show (amount, fee, balance));
+
+            if ((amount + fee) > balance) {
+                // remove caller from on going txs
+                onGoingTx.delete(caller);
+                return #err("You don't have enough balance.");
+            };
+
+            let approve = await box.icrc2_approve({
+                from_subaccount = null;
+                spender = {
+                    owner = Principal.fromActor(Self);
+                    subaccount = null;
+                };
+                amount = balance; // FIXME only necesary tokens
+                expected_allowance = null;
+                expires_at = null;
+                fee = null;
+                memo = null;
+                created_at_time = null;
+            });
+
+            Debug.print(debug_show (approve));
+            switch (approve) {
+                case (#Ok(_)) {};
+                case (#Err(_)) {
+                    // remove caller from on going txs
+                    onGoingTx.delete(caller);
+                    return #err("Approve error.");
+                };
+            };
+
+            // [x] 2. verify last caller proposal
+            switch (lastProposals.get(caller)) {
+                case (null) lastProposals.put(caller, Time.now());
+                case (?res) {
+                    let nanosecPerDay = 86_400_000_000_000;
+                    let time = Time.now();
+                    let timeParsed = time / nanosecPerDay;
+                    let lastProposal = res / nanosecPerDay;
+
+                    if (timeParsed == lastProposal) {
+                        // remove caller from on going txs
+                        onGoingTx.delete(caller);
+                        return #err("You only can create 1 proposal per day.");
+                    } else lastProposals.put(caller, time);
+                };
+            };
 
             // deposit to create the proposal
             let tx = await box.icrc2_transfer_from({
@@ -377,11 +505,19 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
                 created_at_time = null;
             });
 
+            Debug.print(debug_show tx);
+
             switch (tx) {
-                case (#Err(_)) return #err("Tx error.");
+                case (#Err(_)) {
+                    // remove caller from on going txs
+                    onGoingTx.delete(caller);
+                    return #err("Tx error.");
+                };
                 case (#Ok(nat)) return #ok();
             };
         } catch (e) {
+            // remove caller from on going txs
+            onGoingTx.delete(caller);
             return #err("Unexpected error making tx." # Error.message(e));
         };
     };

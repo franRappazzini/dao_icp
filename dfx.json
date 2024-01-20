@@ -3,6 +3,10 @@
     "dao": {
       "main": "src/Main.mo",
       "type": "motoko"
+    },
+    "token": {
+      "main": "src/test-token.mo",
+      "type": "motoko"
     }
   }
 }
