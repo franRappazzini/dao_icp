@@ -1,0 +1,9 @@
+dfx deploy dao --argument "(record {
+ accounts = vec { record { owner = principal \"ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe\"; tokens = record { amount_e8s = 100_000_000 }; }; };
+ proposals = vec {};
+ system_params = record {
+     transfer_fee = record { amount_e8s = 10_000 };
+     proposal_vote_threshold = record { amount_e8s = 10_000_000 };
+     proposal_submission_deposit = record { amount_e8s = 10_000 };
+ };
+})"
