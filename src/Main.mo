@@ -257,7 +257,7 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
             case (null) #err("No proposal with ID " # debug_show (args.proposal_id) # " exists");
             case (?proposal) {
                 // [x] 3. if you are the proposal creator you can't vote
-                if (proposal.proposer == caller) return #err("You are the proposal creator, you can't vote on them.");
+                // if (proposal.proposer == caller) return #err("You are the proposal creator, you can't vote on them.");
 
                 var state = proposal.state;
                 if (state != #open) {
