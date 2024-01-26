@@ -522,6 +522,24 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
         };
     };
 
+    func verifyStatus(proposalId : Nat) : Types.Result<(), Text> {
+        switch (Trie.get(proposals, Types.proposal_key(proposalId), Nat.equal)) {
+            case (?proposal) {
+                let nanosecPerDay = 86_400_000_000_000;
+                let limitDate = proposal.timestamp + (3 * nanosecPerDay);
+
+                if (proposal.state == #open and Time.now() > limitDate) {
+                    let yes = proposal.votes_yes.amount_e8s;
+                    let no = proposal.votes_no.amount_e8s;
+                    if (yes > no) update_proposal_state(proposal, #succeeded) else update_proposal_state(proposal, #rejected);
+                    return #err("Proposal is finished.");
+                };
+                #ok();
+            };
+            case (null) #ok();
+        };
+    };
+
     // ---- SYSTEM FUNCTIONS ----
     system func preupgrade() {
         lastProposalsStable := Iter.toArray(lastProposals.entries());
