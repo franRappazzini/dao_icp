@@ -19,9 +19,11 @@ module {
     payload : ProposalPayload;
   };
   public type ProposalPayload = {
-    method : Text;
-    canister_id : Principal;
-    message : Blob;
+    // method : Text;
+    // canister_id : Principal;
+    // message : Blob;
+    title : Text;
+    message : Text;
   };
   public type ProposalState = {
     // A failure occurred while executing the proposal
@@ -61,7 +63,7 @@ module {
   public type BasicDaoStableStorage = {
     accounts : [Account];
     proposals : [Proposal];
-    system_params : SystemParams;
+    // system_params : SystemParams;
   };
 
   public func proposal_key(t : Nat) : Trie.Key<Nat> = {

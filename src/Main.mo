@@ -22,7 +22,7 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
     stable var accounts = Types.accounts_fromArray(init.accounts);
     stable var proposals = Types.proposals_fromArray(init.proposals);
     stable var next_proposal_id : Nat = 0;
-    stable var system_params : Types.SystemParams = init.system_params;
+    // stable var system_params : Types.SystemParams = init.system_params;
     stable var lastProposalsStable : [(Principal, Int)] = [];
 
     // set boxy token
@@ -49,24 +49,24 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
     };
 
     /// Transfer tokens from the caller's account to another account
-    public shared ({ caller }) func transfer(transfer : Types.TransferArgs) : async Types.Result<(), Text> {
-        switch (account_get caller) {
-            case null { #err "Caller needs an account to transfer funds" };
-            case (?from_tokens) {
-                let fee = system_params.transfer_fee.amount_e8s;
-                let amount = transfer.amount.amount_e8s;
-                if (from_tokens.amount_e8s < amount + fee) {
-                    #err("Caller's account has insufficient funds to transfer " # debug_show (amount));
-                } else {
-                    let from_amount : Nat = from_tokens.amount_e8s - amount - fee;
-                    account_put(caller, { amount_e8s = from_amount });
-                    let to_amount = Option.get(account_get(transfer.to), Types.zeroToken).amount_e8s + amount;
-                    account_put(transfer.to, { amount_e8s = to_amount });
-                    #ok;
-                };
-            };
-        };
-    };
+    // public shared ({ caller }) func transfer(transfer : Types.TransferArgs) : async Types.Result<(), Text> {
+    //     switch (account_get caller) {
+    //         case null { #err "Caller needs an account to transfer funds" };
+    //         case (?from_tokens) {
+    //             let fee = system_params.transfer_fee.amount_e8s;
+    //             let amount = transfer.amount.amount_e8s;
+    //             if (from_tokens.amount_e8s < amount + fee) {
+    //                 #err("Caller's account has insufficient funds to transfer " # debug_show (amount));
+    //             } else {
+    //                 let from_amount : Nat = from_tokens.amount_e8s - amount - fee;
+    //                 account_put(caller, { amount_e8s = from_amount });
+    //                 let to_amount = Option.get(account_get(transfer.to), Types.zeroToken).amount_e8s + amount;
+    //                 account_put(transfer.to, { amount_e8s = to_amount });
+    //                 #ok;
+    //             };
+    //         };
+    //     };
+    // };
 
     /// Return the account balance of the caller
     public query ({ caller }) func account_balance() : async Types.Tokens {
@@ -350,23 +350,23 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
     };
 
     /// Get the current system params
-    public query func get_system_params() : async Types.SystemParams {
-        system_params;
-    };
+    // public query func get_system_params() : async Types.SystemParams {
+    //     system_params;
+    // };
 
     /// Update system params
     ///
     /// Only callable via proposal execution
-    public shared ({ caller }) func update_system_params(payload : Types.UpdateSystemParamsPayload) : async () {
-        if (caller != Principal.fromActor(Self)) {
-            return;
-        };
-        system_params := {
-            transfer_fee = Option.get(payload.transfer_fee, system_params.transfer_fee);
-            proposal_vote_threshold = Option.get(payload.proposal_vote_threshold, system_params.proposal_vote_threshold);
-            proposal_submission_deposit = Option.get(payload.proposal_submission_deposit, system_params.proposal_submission_deposit);
-        };
-    };
+    // public shared ({ caller }) func update_system_params(payload : Types.UpdateSystemParamsPayload) : async () {
+    //     if (caller != Principal.fromActor(Self)) {
+    //         return;
+    //     };
+    //     system_params := {
+    //         transfer_fee = Option.get(payload.transfer_fee, system_params.transfer_fee);
+    //         proposal_vote_threshold = Option.get(payload.proposal_vote_threshold, system_params.proposal_vote_threshold);
+    //         proposal_submission_deposit = Option.get(payload.proposal_submission_deposit, system_params.proposal_submission_deposit);
+    //     };
+    // };
 
     /// Deduct the proposal submission deposit from the caller's account
     func deduct_proposal_submission_deposit(caller : Principal) : Types.Result<(), Text> {
@@ -377,16 +377,17 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
                 #err "Caller needs an account to submit a proposal";
             };
             case (?from_tokens) {
-                let threshold = system_params.proposal_submission_deposit.amount_e8s;
-                if (from_tokens.amount_e8s < threshold) {
-                    // remove caller from on going txs
-                    onGoingTx.delete(caller);
-                    #err("Caller's account must have at least " # debug_show (threshold) # " to submit a proposal");
-                } else {
-                    let from_amount : Nat = from_tokens.amount_e8s - threshold;
-                    account_put(caller, { amount_e8s = from_amount });
-                    #ok;
-                };
+                // let threshold = system_params.proposal_submission_deposit.amount_e8s;
+                // if (from_tokens.amount_e8s < threshold) {
+                //     // remove caller from on going txs
+                //     onGoingTx.delete(caller);
+                //     #err("Caller's account must have at least " # debug_show (threshold) # " to submit a proposal");
+                // } else {
+                //     let from_amount : Nat = from_tokens.amount_e8s - threshold;
+                //     account_put(caller, { amount_e8s = from_amount });
+                //     #ok;
+                // };
+                #ok();
             };
         };
     };
@@ -400,23 +401,23 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
         };
 
         for ((id, proposal) in Trie.iter(accepted_proposals)) {
-            switch (await execute_proposal(proposal)) {
-                case (#ok) { update_proposal_state(proposal, #succeeded) };
-                case (#err(err)) {
-                    update_proposal_state(proposal, #failed(err));
-                };
-            };
+            // switch (await execute_proposal(proposal)) {
+            //     case (#ok) { update_proposal_state(proposal, #succeeded) };
+            //     case (#err(err)) {
+            //         update_proposal_state(proposal, #failed(err));
+            //     };
+            // };
         };
     };
 
     /// Execute the given proposal
-    func execute_proposal(proposal : Types.Proposal) : async Types.Result<(), Text> {
-        try {
-            let payload = proposal.payload;
-            ignore await ICRaw.call(payload.canister_id, payload.method, payload.message);
-            #ok;
-        } catch (e) { #err(Error.message e) };
-    };
+    // func execute_proposal(proposal : Types.Proposal) : async Types.Result<(), Text> {
+    //     try {
+    //         let payload = proposal.payload;
+    //         ignore await ICRaw.call(payload.canister_id, payload.method, payload.message);
+    //         #ok;
+    //     } catch (e) { #err(Error.message e) };
+    // };
 
     func update_proposal_state(proposal : Types.Proposal, state : Types.ProposalState) {
         let updated = {
