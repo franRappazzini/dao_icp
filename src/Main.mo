@@ -375,28 +375,28 @@ shared actor class BOXDAO(init : Types.BasicDaoStableStorage) = Self {
     // };
 
     /// Deduct the proposal submission deposit from the caller's account
-    func deduct_proposal_submission_deposit(caller : Principal) : Types.Result<(), Text> {
-        switch (account_get(caller)) {
-            case null {
-                // remove caller from on going txs
-                onGoingTx.delete(caller);
-                #err "Caller needs an account to submit a proposal";
-            };
-            case (?from_tokens) {
-                // let threshold = system_params.proposal_submission_deposit.amount_e8s;
-                // if (from_tokens.amount_e8s < threshold) {
-                //     // remove caller from on going txs
-                //     onGoingTx.delete(caller);
-                //     #err("Caller's account must have at least " # debug_show (threshold) # " to submit a proposal");
-                // } else {
-                //     let from_amount : Nat = from_tokens.amount_e8s - threshold;
-                //     account_put(caller, { amount_e8s = from_amount });
-                //     #ok;
-                // };
-                #ok();
-            };
-        };
-    };
+    // func deduct_proposal_submission_deposit(caller : Principal) : Types.Result<(), Text> {
+    //     switch (account_get(caller)) {
+    //         case null {
+    //             // remove caller from on going txs
+    //             onGoingTx.delete(caller);
+    //             #err "Caller needs an account to submit a proposal";
+    //         };
+    //         case (?from_tokens) {
+    //             // let threshold = system_params.proposal_submission_deposit.amount_e8s;
+    //             // if (from_tokens.amount_e8s < threshold) {
+    //             //     // remove caller from on going txs
+    //             //     onGoingTx.delete(caller);
+    //             //     #err("Caller's account must have at least " # debug_show (threshold) # " to submit a proposal");
+    //             // } else {
+    //             //     let from_amount : Nat = from_tokens.amount_e8s - threshold;
+    //             //     account_put(caller, { amount_e8s = from_amount });
+    //             //     #ok;
+    //             // };
+    //             #ok();
+    //         };
+    //     };
+    // };
 
     /// Execute all accepted proposals
     func execute_accepted_proposals() : async () {
