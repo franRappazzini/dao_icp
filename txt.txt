@@ -8,6 +8,11 @@ dfx deploy dao --argument "(record {
  };
 })"
 
+dfx deploy dao --argument "(record {
+ accounts = vec { record { owner = principal \"ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe\"; tokens = record { amount_e8s = 100_000_000 }; }; };
+ proposals = vec {};
+})"
+
 submit_proposal
 
 dfx canister call dao submit_proposal '(record {method = "idk"; canister_id = principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"; message = vec {0};})'
@@ -27,6 +32,6 @@ plug:
 yo:
 ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe
 
-dfx canister call token icrc1_transfer '(record {to= record {owner= principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"}; amount = 11_000_000_000_000})'
+dfx canister call token icrc1_transfer '(record {to= record {owner= principal "2vxsx-fae"}; amount = 11_000_000_000_000})'
 
 dfx canister call token icrc2_approve '(record { spender = record {owner = principal "bkyz2-fmaaa-aaaaa-qaaaq-cai"; subaccount = null;}; amount = 73999999999900})'
