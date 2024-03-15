@@ -9,7 +9,7 @@ dfx deploy dao --argument "(record {
 })"
 
 dfx deploy dao --argument "(record {
- accounts = vec { record { owner = principal \"ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe\"; tokens = record { amount_e8s = 100_000_000 }; }; };
+ accounts = vec { record { owner = principal \"ripjo-binnx-2gwst-bqo32-kxtpx-z4z54-62yzw-yitre-mv5ru-kclg6-hqe\"; }; };
  proposals = vec {};
 })"
 

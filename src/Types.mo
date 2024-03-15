@@ -7,7 +7,7 @@ import Principal "mo:base/Principal";
 
 module {
   public type Result<T, E> = Result.Result<T, E>;
-  public type Account = { owner : Principal; tokens : Tokens };
+  public type Account = { owner : Principal };
   public type Proposal = {
     id : Nat;
     votes_no : Tokens;
@@ -23,7 +23,8 @@ module {
     // canister_id : Principal;
     // message : Blob;
     title : Text;
-    message : Text;
+    description : Text;
+    topic : Text;
   };
   public type ProposalState = {
     // A failure occurred while executing the proposal
@@ -77,7 +78,7 @@ module {
   public func accounts_fromArray(arr : [Account]) : Trie.Trie<Principal, Tokens> {
     var s = Trie.empty<Principal, Tokens>();
     for (account in arr.vals()) {
-      s := Trie.put(s, account_key(account.owner), Principal.equal, account.tokens).0;
+      s := Trie.put(s, account_key(account.owner), Principal.equal, { amount_e8s = 0 }).0;
     };
     s;
   };
